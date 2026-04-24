@@ -16,8 +16,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Store App',
       theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
@@ -39,14 +39,58 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   final ApiService apiService = ApiService();
+  late TabController _tabController;
+
+  final List<String> categories = [
+    'All',
+    'beauty',
+    'fragrances',
+    'furniture',
+    'groceries',
+  ];
+
+  late Future<List<Product>> _productsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: categories.length, vsync: this);
+
+    _productsFuture = apiService.fetchProducts('');
+
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+          String selectedCategory = categories[_tabController.index];
+          if (selectedCategory == 'All') {
+            _productsFuture = apiService.fetchProductsByCategory('..');
+          } else {
+            _productsFuture = apiService.fetchProductsByCategory(selectedCategory);
+          }
+
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: categories.map((cat) => Tab(text: cat)).toList(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -57,7 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: FutureBuilder<List<Product>>(
-        future: apiService.fetchProducts(''),
+        future: _productsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
