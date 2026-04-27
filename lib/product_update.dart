@@ -57,6 +57,7 @@ class _ProductUpdatePageState extends State<ProductUpdatePage>{
           child: Column(
             children: [
               TextFormField(
+                autofocus: true,
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: "Product Title"),
               ),

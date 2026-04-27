@@ -15,7 +15,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("Confiem Delete"),
+          title: const Text("Confirm Delete"),
           content: const Text("Are you sure you want to delete this Product?"),
           actions: [
             TextButton(
