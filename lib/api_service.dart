@@ -79,4 +79,13 @@ class ApiService {
       throw Exception('Failed to Update Product');
     }
   }
+
+  Future<void> deleteProduct(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/products/$id'),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to Delete Product');
+    }
+  }
 }

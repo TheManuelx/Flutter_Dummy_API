@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dummy_json/api_service.dart';
 import 'package:flutter_dummy_json/product_model.dart';
 import 'package:flutter_dummy_json/product_update.dart';
 
@@ -10,7 +11,41 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
+  void _confirmDelete() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Confiem Delete"),
+          content: const Text("Are you sure you want to delete this Product?"),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+            ),
+            TextButton(
+                onPressed: () async {
+                  try {
+                    final apiService = ApiService();
+                    await apiService.deleteProduct(currentProduct!.id);
 
+                    if (!mounted) return;
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('Product deleted Successfully')),
+                    );
+
+                    Navigator.pop(context, 'deleted');
+                  } catch(e) {
+                    print(e);
+                  }
+                },
+                child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+    );
+  }
   Product? currentProduct;
   @override
   Widget build(BuildContext context) {
@@ -39,8 +74,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   });
                 }
               },
-
-
+          ),
+          IconButton(
+            icon: Icon(Icons.delete, color: (Colors.red)),
+            onPressed: () {
+              _confirmDelete();
+            },
           )
         ],
       ),
