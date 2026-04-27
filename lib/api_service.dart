@@ -45,4 +45,38 @@ class ApiService {
       throw Exception('Failed to load Catagories');
     }
   }
+
+  Future<Product> addProduct(Product product) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/products/add'),
+      headers: { 'Content-Type': 'application/json' },
+      body: jsonEncode({
+        'title': product.title,
+        'description': product.description,
+        'price': product.price,
+        'category': product.category,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Product.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to add Product');
+    }
+  }
+
+  Future<Product> updateProduct(int id, Product product) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/products/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'title': product.title,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Product.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to Update Product');
+    }
+  }
 }

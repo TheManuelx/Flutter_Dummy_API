@@ -1,6 +1,6 @@
 class Product {
   final int id;
-  final String title;
+  String title;
   final String? description;
   final String category;
   final double price;

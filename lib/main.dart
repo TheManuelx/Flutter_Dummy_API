@@ -3,6 +3,8 @@ import 'package:flutter_dummy_json/product_model.dart';
 import 'package:flutter_dummy_json/api_service.dart';
 import 'package:flutter_dummy_json/product_detail.dart';
 import 'package:flutter_dummy_json/product_search.dart';
+import 'package:flutter_dummy_json/product_add.dart';
+import 'package:flutter_dummy_json/product_update.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,9 +41,14 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   final ApiService apiService = ApiService();
   late TabController _tabController;
+
+  List<Product> products = [];
+  List<Product> locallyAddedProducts = [];
+  bool isLoading = true;
 
   final List<String> categories = [
     'All',
@@ -57,8 +64,13 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: categories.length, vsync: this);
+    _loadProducts('All');
 
-    _productsFuture = apiService.fetchProducts('');
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        _loadProducts(categories[_tabController.index]);
+      }
+    });
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -67,12 +79,36 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           if (selectedCategory == 'All') {
             _productsFuture = apiService.fetchProductsByCategory('..');
           } else {
-            _productsFuture = apiService.fetchProductsByCategory(selectedCategory);
+            _productsFuture = apiService.fetchProductsByCategory(
+              selectedCategory,
+            );
           }
-
         });
       }
     });
+  }
+
+  Future<void> _loadProducts(String category) async {
+    setState(() => isLoading = true);
+    try {
+      List<Product> data;
+      if (category == 'All') {
+        data = await apiService.fetchProducts('');
+      } else {
+        data = await apiService.fetchProductsByCategory(category);
+      }
+
+      List<Product> localFilltered = locallyAddedProducts.where((p) {
+        return category == 'All' || p.category == category;
+      }).toList();
+
+      setState(() {
+        products = [...localFilltered, ...data];
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -98,26 +134,36 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               Navigator.pushNamed(context, '/search');
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              int lastId = products.isNotEmpty ? products.last.id : 0;
+              final newProduct = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductAddPage(lastId: lastId),
+                ),
+              );
+              if (newProduct != null && newProduct is Product) {
+                setState(() {
+                  locallyAddedProducts.insert(0, newProduct);
+                  products.insert(0, newProduct);
+                });
+              }
+            },
+          ),
         ],
       ),
-      body: FutureBuilder<List<Product>>(
-        future: _productsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return GridView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : GridView.builder(
+              itemCount: products.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.7,
               ),
-
-              itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
-                final product = snapshot.data![index];
+                final product = products[index];
                 return GestureDetector(
                   onTap: () => Navigator.pushNamed(
                     context,
@@ -125,53 +171,27 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                     arguments: product,
                   ),
                   child: Card(
-                    clipBehavior: Clip.antiAlias,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 3,
-                          child: Container(
-                            width: double.infinity,
-                            color: Colors.white,
-                            child: Image.network(
-                              product.images[0],
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                          child: product.images.isNotEmpty
+                              ? Image.network(
+                                  product.images[0],
+                                  fit: BoxFit.contain,
+                                )
+                              : const Icon(Icons.image_not_supported),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              Text(
-                                '\$${product.price}',
-                                style: const TextStyle(color: Colors.green),
-                              ),
-                            ],
-                          ),
+                        Text(product.title),
+                        Text(
+                          '\$${product.price}',
+                          style: const TextStyle(color: Colors.green),
                         ),
                       ],
                     ),
                   ),
                 );
               },
-            );
-          } else {
-            return const Center(child: Text('Error'));
-          }
-        },
-      ),
+            ),
     );
   }
 }
